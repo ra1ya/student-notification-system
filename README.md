@@ -30,6 +30,12 @@ The Flutter application communicates with a lightweight PHP/MySQL backend over H
 - Password-hash support for administrator accounts
 - XLSX student import through PhpSpreadsheet with validation
 
+### Flutter API Configuration
+- All Flutter API endpoints are built from `lib/api_config.dart`
+- No endpoint URL is duplicated across screens
+- Local Android Emulator development works by default through `10.0.2.2`
+- Real-device and production API URLs can be supplied with `--dart-define`
+
 ## Tech Stack
 
 - **Mobile:** Flutter, Dart
@@ -45,15 +51,17 @@ The Flutter application communicates with a lightweight PHP/MySQL backend over H
 android/                 Android application files
 ios/                     iOS application files
 lib/                     Flutter application source
+├── api_config.dart      Central Flutter API configuration
 ├── main.dart
 ├── studentlogin.dart
 ├── adminlogin.dart
 ├── register.dart
 ├── message.dart
+├── show.dart
 ├── showmessage.dart
 └── showmessageadmin.dart
 php_files/               PHP backend endpoints
-├── config.php            Shared DB/API configuration
+├── config.php           Shared DB/API configuration
 ├── login.php
 ├── studentlogin.php
 ├── register.php
@@ -87,13 +95,31 @@ Install dependencies:
 flutter pub get
 ```
 
-Run the application:
+For the Android Emulator, the default configuration already points to:
+
+```text
+http://10.0.2.2/php_files
+```
+
+Run normally:
 
 ```bash
 flutter run
 ```
 
-The current Flutter source is configured for Android Emulator local development and calls the PHP backend through `10.0.2.2`.
+For a physical phone on the same local network, pass the computer's LAN address:
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://192.168.1.10/php_files
+```
+
+For production, use your HTTPS API URL:
+
+```bash
+flutter run --dart-define=API_BASE_URL=https://example.com/php_files
+```
+
+The URL is configured once in `lib/api_config.dart`, and every Flutter screen uses `ApiConfig.endpoint(...)`.
 
 ### 2. PHP backend
 
@@ -131,6 +157,10 @@ The portfolio version of the backend uses prepared statements instead of interpo
 
 The login endpoint supports bcrypt/Argon password hashes. A temporary plaintext-password compatibility path remains only so older local databases can still be tested; new deployments should use password hashes exclusively.
 
+## Flutter Cleanup Improvements
+
+The Flutter layer now has one configurable API base URL, consistent JSON parsing, cleaner error handling, and removed duplicated hard-coded backend addresses. The legacy chat screen was also aligned with the JSON response returned by the PHP backend.
+
 ## Portfolio Highlights
 
 This project demonstrates hands-on experience with:
@@ -140,6 +170,8 @@ This project demonstrates hands-on experience with:
 - HTTP requests and JSON handling
 - Role-specific application flows
 - Department- and level-based data filtering
+- Centralized Flutter API configuration
+- Runtime environment configuration with `--dart-define`
 - Prepared statements and backend input validation
 - Centralized backend configuration
 - Password-hash verification
@@ -149,7 +181,7 @@ This project demonstrates hands-on experience with:
 
 ## Notes
 
-This repository is a portfolio/local-development project. Before public deployment, use HTTPS, production environment variables, stronger authorization/session handling, request rate limiting, and a centralized configurable Flutter API base URL.
+This repository is a portfolio/local-development project. Before public deployment, use HTTPS, production environment variables, stronger authorization/session handling, and request rate limiting.
 
 ## Author
 

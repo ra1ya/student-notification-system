@@ -2,10 +2,10 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:rayan_project/showmessage.dart';
-
 
 import 'adminlogin.dart';
+import 'api_config.dart';
+import 'showmessage.dart';
 
 class Studentlogin extends StatefulWidget {
   @override
@@ -14,39 +14,47 @@ class Studentlogin extends StatefulWidget {
 
 class _LoginPageState extends State<Studentlogin> {
   final code = TextEditingController();
-
-  String ?errorText;
+  String? errorText;
   String _errorMessage = '';
+
   Future<void> _loginUser() async {
-    Map<String, dynamic>? _user;
-
-    final response = await http.post(Uri.parse('http://10.0.2.2//php_files/studentlogin.php'),body: {
-      'code': code.text,
-    });
-
-    print(response.statusCode);
-    if (response.statusCode == 200) {
-      // Login successful
-      final userData = jsonDecode(response.body);
-      print(userData);
-      if (userData["result"] == "not here") {
-        setState(() {
-          print(userData['dep']);
-          errorText = " رقم القيد غير موجود";
-        });
-      }
-      else{
-        print(userData['dep']);
-        Navigator.push(context, MaterialPageRoute(builder: (context) =>
-            ChatPage(dep: userData!['dep'], level: userData!['level'])));
-        print(userData!['dep']);
-    }
-      // Perform any additional actions, such as navigating to a home screen
-    } else {
-      // Login failed
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("الطالب غير موجود في هذا القسم")),
+    try {
+      final response = await http.post(
+        ApiConfig.endpoint('studentlogin.php'),
+        body: {'code': code.text},
       );
+
+      if (response.statusCode != 200) {
+        setState(() {
+          _errorMessage = 'تعذر الاتصال بالخادم';
+        });
+        return;
+      }
+
+      final userData = jsonDecode(response.body) as Map<String, dynamic>;
+
+      if (userData['result'] == 'not here') {
+        setState(() {
+          errorText = 'رقم القيد غير موجود';
+        });
+        return;
+      }
+
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatPage(
+            dep: userData['dep'].toString(),
+            level: userData['level'].toString(),
+          ),
+        ),
+      );
+    } catch (_) {
+      setState(() {
+        _errorMessage = 'تعذر الاتصال بالخادم';
+      });
     }
   }
 
@@ -58,7 +66,7 @@ class _LoginPageState extends State<Studentlogin> {
         appBar: PreferredSize(
           preferredSize: Size.fromHeight(50),
           child: AppBar(
-            title: Text("تسجيل دخول كطالب ..."),
+            title: Text('تسجيل دخول كطالب'),
             centerTitle: true,
             actions: [
               PopupMenuButton<String>(
@@ -78,7 +86,6 @@ class _LoginPageState extends State<Studentlogin> {
                 ],
               ),
             ],
-
           ),
         ),
         body: Padding(
@@ -106,19 +113,23 @@ class _LoginPageState extends State<Studentlogin> {
                     hintText: 'رقم القيد',
                     hintStyle: TextStyle(color: Colors.grey),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   ),
                 ),
               ),
               SizedBox(height: 32.0),
               Visibility(
-                visible: errorText!=null,
-                  child: Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Text(errorText??"",style: TextStyle(color: Colors.red),),
-                  )
+                visible: errorText != null,
+                child: Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                    errorText ?? '',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
               ),
-              SizedBox(height: 32.0),
+              SizedBox(height: 16.0),
               ElevatedButton(
                 onPressed: _loginUser,
                 style: ElevatedButton.styleFrom(
@@ -127,10 +138,11 @@ class _LoginPageState extends State<Studentlogin> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.0),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                 ),
                 child: Text(
-                  "تسجيل الدخول",
+                  'تسجيل الدخول',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16.0,
@@ -151,4 +163,3 @@ class _LoginPageState extends State<Studentlogin> {
     );
   }
 }
-

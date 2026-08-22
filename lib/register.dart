@@ -1,52 +1,63 @@
-import 'dart:convert';
-
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+
+import 'api_config.dart';
+
 class RegisterPage extends StatefulWidget {
-   String dep;
-   RegisterPage({required this.dep});
+  String dep;
+
+  RegisterPage({required this.dep});
+
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
+
 class _RegisterPageState extends State<RegisterPage> {
   String _selectedValue = 'L1';
   final code = TextEditingController();
   final fullname = TextEditingController();
-  final dep = TextEditingController();
-  final level = TextEditingController();
   String _errorMessage = '';
-  Future<void> _RegisterUser() async {
-    Map<String, dynamic>? _user;
-    final response = await http.post(Uri.parse('http://10.0.2.2//php_files/register.php'),body: {
-      'code': code.text,
-      'fullname': fullname.text,
-      'dep': widget.dep,
-      'level': _selectedValue,
-    });
-    if (response.statusCode == 200) {
-      // Login successful
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("تم اضافة الطالب بنجاح")),
-      );
-      // Perform any additional actions, such as navigating to a home screen
-    } else {
-      // Login failed
 
+  Future<void> _registerUser() async {
+    try {
+      final response = await http.post(
+        ApiConfig.endpoint('register.php'),
+        body: {
+          'code': code.text,
+          'fullname': fullname.text,
+          'dep': widget.dep,
+          'level': _selectedValue,
+        },
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم إضافة الطالب بنجاح')),
+        );
+        code.clear();
+        fullname.clear();
+        return;
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("خطا في اضافة الطالب ")),
+        SnackBar(content: Text('تعذر إضافة الطالب')),
       );
+    } catch (_) {
+      setState(() {
+        _errorMessage = 'تعذر الاتصال بالخادم';
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return  Directionality(
+    return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Text("اضافة طالب"),
+          title: Text('إضافة طالب'),
           centerTitle: true,
         ),
         body: Padding(
@@ -74,7 +85,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     hintText: 'رقم القيد',
                     hintStyle: TextStyle(color: Colors.grey),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   ),
                 ),
               ),
@@ -96,15 +108,14 @@ class _RegisterPageState extends State<RegisterPage> {
                   controller: fullname,
                   decoration: InputDecoration(
                     hintText: 'الاسم الكامل',
-
                     hintStyle: TextStyle(color: Colors.grey),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   ),
                 ),
               ),
               SizedBox(height: 32.0),
-
               DropdownButtonFormField<String>(
                 alignment: Alignment.centerRight,
                 value: _selectedValue,
@@ -113,30 +124,33 @@ class _RegisterPageState extends State<RegisterPage> {
                     _selectedValue = newValue!;
                   });
                 },
-                items: ['L1', 'L2', 'L3','L4']
-                    .map((value) => DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value,textAlign:TextAlign.right,),
-                ))
+                items: ['L1', 'L2', 'L3', 'L4']
+                    .map(
+                      (value) => DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value, textAlign: TextAlign.right),
+                      ),
+                    )
                     .toList(),
                 decoration: InputDecoration(
                   labelText: 'المستوى',
                   border: OutlineInputBorder(),
                 ),
               ),
-              SizedBox(height: 40,),
+              SizedBox(height: 40),
               ElevatedButton(
-                onPressed: _RegisterUser,
+                onPressed: _registerUser,
                 style: ElevatedButton.styleFrom(
                   primary: Colors.green,
                   elevation: 5,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.0),
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                 ),
                 child: Text(
-                  "تسجيل الطالب",
+                  'تسجيل الطالب',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16.0,
