@@ -9,28 +9,51 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   flutter:
-    name: Flutter analyze and test
+    name: Flutter quality and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+
+      - name: Set up Flutter stable
+        uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.9'
           channel: stable
           cache: true
-      - run: flutter pub get
-      - run: flutter analyze
-      - run: flutter test
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze Dart code
+        run: flutter analyze
+
+      - name: Run widget tests
+        run: flutter test
+
+      - name: Build Android debug APK
+        run: flutter build apk --debug
 
   php:
-    name: PHP syntax check
+    name: PHP quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
+          coverage: none
+
       - name: Lint PHP files
         run: find php_files -maxdepth 1 -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Validate Composer manifest
+        run: php -r '$d=json_decode(file_get_contents("php_files/composer.json"), true, 512, JSON_THROW_ON_ERROR); if (!isset($d["require"])) { exit(1); } echo "composer.json is valid\n";'
