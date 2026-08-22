@@ -50,7 +50,8 @@ class _MessagePageState extends State<MessagePage> {
 
       if (!mounted) return;
 
-      if ((response.statusCode == 200 || response.statusCode == 201) && success) {
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          success) {
         _messageController.clear();
         _showMessage('تم إرسال الرسالة بنجاح');
       } else {
@@ -135,7 +136,8 @@ class _MessagePageState extends State<MessagePage> {
                       .map(
                         (level) => DropdownMenuItem<String>(
                           value: level,
-                          child: Text(level == 'all' ? 'جميع المستويات' : level),
+                          child:
+                              Text(level == 'all' ? 'جميع المستويات' : level),
                         ),
                       )
                       .toList(),
