@@ -1,201 +1,191 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart' hide TextDirection;
 
-import 'api_config.dart';
+import 'api_client.dart';
 import 'register.dart';
 import 'showmessageadmin.dart';
 
-class Message extends StatefulWidget {
-  String dep;
+class MessagePage extends StatefulWidget {
+  const MessagePage({super.key, required this.department});
 
-  Message({required this.dep});
+  final String department;
 
   @override
-  _MyWidgetState createState() => _MyWidgetState();
+  State<MessagePage> createState() => _MessagePageState();
 }
 
-class _MyWidgetState extends State<Message> {
-  String _selectedValue = 'L1';
-  String? formattedDate;
-  final DateTime _currentDate = DateTime.now();
-  final TextEditingController _textFieldController = TextEditingController();
+class _MessagePageState extends State<MessagePage> {
+  final _messageController = TextEditingController();
 
-  Future<void> _submitData() async {
+  String _selectedLevel = 'L1';
+  bool _isSending = false;
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _sendMessage() async {
+    final message = _messageController.text.trim();
+    if (message.isEmpty) {
+      _showMessage('اكتب الرسالة أولًا');
+      return;
+    }
+
+    setState(() => _isSending = true);
+
     try {
-      final response = await http.post(
-        ApiConfig.endpoint('message.php'),
+      final response = await ApiClient.post(
+        'message.php',
+        auth: ApiAuth.admin,
         body: {
-          'level': _selectedValue,
-          'message': _textFieldController.text,
-          'dep': widget.dep,
-          'time': formattedDate.toString(),
+          'level': _selectedLevel,
+          'message': message,
+          'dep': widget.department,
         },
       );
 
+      final payload = ApiClient.decodeObject(response.body);
+      final success = payload['success'] == true;
+
       if (!mounted) return;
 
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('تم إرسال الرسالة بنجاح')),
-        );
-        _textFieldController.clear();
+      if ((response.statusCode == 200 || response.statusCode == 201) && success) {
+        _messageController.clear();
+        _showMessage('تم إرسال الرسالة بنجاح');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ في إرسال الرسالة')),
-        );
+        _showMessage('تعذر إرسال الرسالة');
       }
     } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تعذر الاتصال بالخادم')),
-      );
+      if (mounted) {
+        _showMessage('تعذر الاتصال بالخادم');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSending = false);
+      }
     }
   }
 
-  void submit() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            ShowAdmin(dep: widget.dep, level: _selectedValue),
-      ),
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
-  String _departmentTitle() {
-    switch (widget.dep) {
-      case 'IT':
-        return 'قسم تقنية المعلومات';
-      case 'acc':
-        return 'محاسبة';
-      case 'mang':
-        return 'إدارة أعمال';
-      case 'info':
-        return 'نظم معلومات';
-      case 'english':
-        return 'اللغة الإنجليزية';
-      case 'quran':
-        return 'القرآن وعلومه';
-      case 'shar':
-        return 'الشريعة';
-      case 'feg':
-        return 'الفقه';
-      default:
-        return widget.dep;
-    }
+  String get _departmentTitle {
+    return switch (widget.department) {
+      'IT' => 'قسم تقنية المعلومات',
+      'acc' => 'المحاسبة',
+      'mang' => 'إدارة الأعمال',
+      'info' => 'نظم المعلومات',
+      'english' => 'اللغة الإنجليزية',
+      'quran' => 'القرآن وعلومه',
+      'shar' => 'الشريعة',
+      'feg' => 'الفقه',
+      _ => widget.department,
+    };
   }
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('yyyy MMMM d');
-    formattedDate = dateFormat.format(_currentDate);
-
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_departmentTitle()),
+          title: Text(_departmentTitle),
           centerTitle: true,
           actions: [
-            PopupMenuButton<String>(
-              onSelected: (String value) {
-                if (value == 'reg') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => RegisterPage(dep: widget.dep),
-                    ),
-                  );
-                }
+            IconButton(
+              tooltip: 'تسجيل الخروج',
+              onPressed: () {
+                ApiClient.clearAdminToken();
+                Navigator.of(context).popUntil((route) => route.isFirst);
               },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                PopupMenuItem<String>(
-                  value: 'reg',
-                  child: Text('إضافة طالب'),
-                ),
-              ],
+              icon: const Icon(Icons.logout),
+            ),
+            IconButton(
+              tooltip: 'إضافة طالب',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => RegisterPage(department: widget.department),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.person_add_alt_1_outlined),
             ),
           ],
         ),
         body: Center(
-          child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 620),
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              shrinkWrap: true,
               children: [
                 DropdownButtonFormField<String>(
-                  alignment: Alignment.centerRight,
-                  value: _selectedValue,
-                  onChanged: (newValue) {
-                    setState(() {
-                      _selectedValue = newValue!;
-                    });
-                  },
-                  items: ['L1', 'L2', 'L3', 'L4', 'all']
-                      .map(
-                        (value) => DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value, textAlign: TextAlign.right),
-                        ),
-                      )
-                      .toList(),
-                  decoration: InputDecoration(
+                  value: _selectedLevel,
+                  decoration: const InputDecoration(
                     labelText: 'المستوى',
                     border: OutlineInputBorder(),
                   ),
+                  items: const ['L1', 'L2', 'L3', 'L4', 'all']
+                      .map(
+                        (level) => DropdownMenuItem<String>(
+                          value: level,
+                          child: Text(level == 'all' ? 'جميع المستويات' : level),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _isSending
+                      ? null
+                      : (value) {
+                          if (value != null) {
+                            setState(() => _selectedLevel = value);
+                          }
+                        },
                 ),
-                SizedBox(height: 16.0),
+                const SizedBox(height: 16),
                 TextField(
-                  maxLines: 10,
-                  minLines: 3,
-                  controller: _textFieldController,
-                  decoration: InputDecoration(
+                  controller: _messageController,
+                  minLines: 4,
+                  maxLines: 8,
+                  maxLength: 4000,
+                  decoration: const InputDecoration(
                     labelText: 'الرسالة',
+                    alignLabelWithHint: true,
                     border: OutlineInputBorder(),
                   ),
                 ),
-                SizedBox(height: 32.0),
-                ElevatedButton(
-                  onPressed: _submitData,
-                  style: ElevatedButton.styleFrom(
-                    primary: Colors.green,
-                    elevation: 5,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 40.0, vertical: 12.0),
-                  ),
-                  child: Text(
-                    'إرسال',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _isSending ? null : _sendMessage,
+                  icon: const Icon(Icons.send_outlined),
+                  label: _isSending
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('إرسال الرسالة'),
                 ),
-                SizedBox(height: 32.0),
-                ElevatedButton(
-                  onPressed: submit,
-                  style: ElevatedButton.styleFrom(
-                    primary: Colors.green,
-                    elevation: 5,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 40.0, vertical: 12.0),
-                  ),
-                  child: Text(
-                    'عرض الرسائل',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AdminMessagesPage(
+                          department: widget.department,
+                          level: _selectedLevel,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.history),
+                  label: const Text('عرض الرسائل المرسلة'),
                 ),
               ],
             ),

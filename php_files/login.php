@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
-$username = post_string('username');
-$password = post_string('password');
+$username = post_string('username', 100);
+$password = post_string('password', 255);
 
 if ($username === '' || $password === '') {
-    json_response(['result' => 'not here']);
+    json_response([
+        'success' => false,
+        'error' => 'Invalid credentials',
+    ], 401);
 }
 
 $connection = db_connection();
@@ -22,19 +25,29 @@ $statement->store_result();
 
 if ($statement->num_rows !== 1) {
     $statement->close();
-    json_response(['result' => 'not here']);
+    json_response([
+        'success' => false,
+        'error' => 'Invalid credentials',
+    ], 401);
 }
 
 $statement->bind_result($id, $dbUsername, $storedPassword, $department);
 $statement->fetch();
 $statement->close();
 
-if (!password_matches($password, (string) $storedPassword)) {
-    json_response(['result' => 'not here']);
+if (!password_verify($password, (string) $storedPassword)) {
+    json_response([
+        'success' => false,
+        'error' => 'Invalid credentials',
+    ], 401);
 }
 
 json_response([
-    'id' => (int) $id,
-    'username' => $dbUsername,
-    'dep' => $department,
+    'success' => true,
+    'token' => create_access_token('admin', (int) $id, ['dep' => (string) $department]),
+    'user' => [
+        'id' => (int) $id,
+        'username' => (string) $dbUsername,
+        'dep' => (string) $department,
+    ],
 ]);

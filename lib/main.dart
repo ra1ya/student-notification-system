@@ -14,9 +14,10 @@ class MyApp extends StatelessWidget {
       title: 'Student Notification System',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.green,
+        colorSchemeSeed: Colors.green,
+        useMaterial3: true,
       ),
-      home: Studentlogin(),
+      home: const StudentLoginPage(),
     );
   }
 }

@@ -1,5 +1,5 @@
 name: student_notification_system
-description: A Flutter mobile application for department- and level-based student notifications.
+description: A Flutter mobile application for secure department- and level-based student notifications.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,15 +9,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  chat_bubbles:
-  intl:
-  http:
-  cupertino_icons: ^1.0.2
+  chat_bubbles: ^1.6.0
+  cupertino_icons: ^1.0.8
+  http: ^1.1.0
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^2.0.3
 
 flutter:
   uses-material-design: true

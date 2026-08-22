@@ -1,60 +1,86 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
-import 'api_config.dart';
+import 'api_client.dart';
 import 'message.dart';
 
-class LoginPage extends StatefulWidget {
+class AdminLoginPage extends StatefulWidget {
+  const AdminLoginPage({super.key});
+
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<AdminLoginPage> createState() => _AdminLoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _AdminLoginPageState extends State<AdminLoginPage> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  String _errorMessage = '';
-  String? errorText;
+
+  bool _isLoading = false;
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _loginUser() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text;
+
+    if (username.isEmpty || password.isEmpty) {
+      setState(() => _errorText = 'أدخل اسم المستخدم وكلمة المرور');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorText = null;
+    });
+
     try {
-      final response = await http.post(
-        ApiConfig.endpoint('login.php'),
+      final response = await ApiClient.post(
+        'login.php',
         body: {
-          'username': _usernameController.text,
-          'password': _passwordController.text,
+          'username': username,
+          'password': password,
         },
       );
 
-      if (response.statusCode != 200) {
-        setState(() {
-          _errorMessage = 'تعذر الاتصال بالخادم';
-        });
+      final payload = ApiClient.decodeObject(response.body);
+      final success = payload['success'] == true;
+      final token = payload['token']?.toString() ?? '';
+      final user = payload['user'];
+
+      if (response.statusCode != 200 || !success || token.isEmpty || user is! Map) {
+        if (!mounted) return;
+        setState(() => _errorText = 'اسم المستخدم أو كلمة المرور غير صحيحة');
         return;
       }
 
-      final userData = jsonDecode(response.body) as Map<String, dynamic>;
-
-      if (userData['result'] == 'not here') {
-        setState(() {
-          errorText = 'اسم المستخدم أو كلمة المرور غير صحيحة';
-        });
+      final department = user['dep']?.toString() ?? '';
+      if (department.isEmpty) {
+        if (!mounted) return;
+        setState(() => _errorText = 'بيانات الحساب غير مكتملة');
         return;
       }
+
+      ApiClient.setAdminToken(token);
 
       if (!mounted) return;
-
-      Navigator.push(
+      await Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => Message(dep: userData['dep'].toString()),
+          builder: (_) => MessagePage(department: department),
         ),
       );
     } catch (_) {
-      setState(() {
-        _errorMessage = 'تعذر الاتصال بالخادم';
-      });
+      if (!mounted) return;
+      setState(() => _errorText = 'تعذر الاتصال بالخادم');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -63,107 +89,63 @@ class _LoginPageState extends State<LoginPage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(50),
-          child: AppBar(
-            title: Text('تسجيل الدخول'),
-            centerTitle: true,
-          ),
+        appBar: AppBar(
+          title: const Text('تسجيل دخول المسؤول'),
+          centerTitle: true,
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.3),
-                      spreadRadius: 2,
-                      blurRadius: 5,
-                      offset: Offset(0, 2),
+        body: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextField(
+                    controller: _usernameController,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'اسم المستخدم',
+                      border: OutlineInputBorder(),
                     ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    hintText: 'اسم المستخدم',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    border: InputBorder.none,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   ),
-                ),
-              ),
-              SizedBox(height: 16.0),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.3),
-                      spreadRadius: 2,
-                      blurRadius: 5,
-                      offset: Offset(0, 2),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    onSubmitted: (_) {
+                      if (!_isLoading) {
+                        _loginUser();
+                      }
+                    },
+                    decoration: const InputDecoration(
+                      labelText: 'كلمة المرور',
+                      border: OutlineInputBorder(),
                     ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    hintText: 'كلمة المرور',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    border: InputBorder.none,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  if (_errorText != null)
+                    Text(
+                      _errorText!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _isLoading ? null : _loginUser,
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('تسجيل الدخول'),
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(height: 32.0),
-              Visibility(
-                visible: errorText != null,
-                child: Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text(
-                    errorText ?? '',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-              ),
-              SizedBox(height: 16.0),
-              ElevatedButton(
-                onPressed: _loginUser,
-                style: ElevatedButton.styleFrom(
-                  primary: Colors.green,
-                  elevation: 5,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.0),
-                  ),
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                ),
-                child: Text(
-                  'تسجيل الدخول',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16.0,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              SizedBox(height: 16.0),
-              if (_errorMessage.isNotEmpty)
-                Text(
-                  _errorMessage,
-                  style: TextStyle(color: Colors.red),
-                ),
-            ],
+            ),
           ),
         ),
       ),

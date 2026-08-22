@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
-$code = post_string('code');
-$fullname = post_string('fullname');
-$department = post_string('dep');
-$level = post_string('level');
+$code = post_string('code', 100);
+$fullname = post_string('fullname', 255);
+$department = post_string('dep', 100);
+$level = post_string('level', 20);
 
 if ($code === '' || $fullname === '' || $department === '' || !valid_level($level, false)) {
     json_response([
@@ -16,6 +16,7 @@ if ($code === '' || $fullname === '' || $department === '' || !valid_level($leve
     ], 422);
 }
 
+require_admin($department);
 $connection = db_connection();
 
 $check = prepared_statement($connection, 'SELECT id FROM student WHERE code = ? LIMIT 1');
@@ -52,9 +53,11 @@ $statement->close();
 
 json_response([
     'success' => true,
-    'id' => (int) $studentId,
-    'code' => $code,
-    'fullname' => $fullname,
-    'dep' => $department,
-    'level' => $level,
-]);
+    'student' => [
+        'id' => (int) $studentId,
+        'code' => $code,
+        'fullname' => $fullname,
+        'dep' => $department,
+        'level' => $level,
+    ],
+], 201);

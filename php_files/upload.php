@@ -7,6 +7,16 @@ use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/vendor/autoload.php';
 
+$admin = require_admin();
+$adminDepartment = (string) ($admin['dep'] ?? '');
+
+if ($adminDepartment === '') {
+    json_response([
+        'success' => false,
+        'error' => 'Invalid administrator token',
+    ], 401);
+}
+
 if (!isset($_FILES['excel_file'])) {
     json_response([
         'success' => false,
@@ -46,7 +56,7 @@ try {
     $reader = new Xlsx();
     $spreadsheet = $reader->load($fileTmp);
     $worksheet = $spreadsheet->getActiveSheet();
-} catch (Throwable $exception) {
+} catch (Throwable) {
     json_response([
         'success' => false,
         'error' => 'Unable to read the uploaded XLSX file',
@@ -54,9 +64,13 @@ try {
 }
 
 $connection = db_connection();
-$statement = prepared_statement(
+$insert = prepared_statement(
     $connection,
     'INSERT INTO student (code, fullname, dep, level) VALUES (?, ?, ?, ?)'
+);
+$exists = prepared_statement(
+    $connection,
+    'SELECT id FROM student WHERE code = ? LIMIT 1'
 );
 
 $inserted = 0;
@@ -73,36 +87,39 @@ foreach ($worksheet->getRowIterator(3) as $row) {
 
     $code = $values[0] ?? '';
     $fullname = $values[1] ?? '';
-    $department = $values[2] ?? '';
+    $rowDepartment = $values[2] ?? '';
     $level = $values[3] ?? '';
 
-    if ($code === '' || $fullname === '' || $department === '' || !valid_level($level, false)) {
+    if ($code === ''
+        || $fullname === ''
+        || $rowDepartment !== $adminDepartment
+        || !valid_level($level, false)) {
         $skipped++;
         continue;
     }
 
-    $check = prepared_statement($connection, 'SELECT id FROM student WHERE code = ? LIMIT 1');
-    $check->bind_param('s', $code);
-    $check->execute();
-    $check->store_result();
+    $exists->bind_param('s', $code);
+    $exists->execute();
+    $exists->store_result();
 
-    if ($check->num_rows > 0) {
-        $check->close();
+    if ($exists->num_rows > 0) {
+        $exists->free_result();
         $skipped++;
         continue;
     }
 
-    $check->close();
-    $statement->bind_param('ssss', $code, $fullname, $department, $level);
+    $exists->free_result();
+    $insert->bind_param('ssss', $code, $fullname, $adminDepartment, $level);
 
-    if ($statement->execute()) {
+    if ($insert->execute()) {
         $inserted++;
     } else {
         $skipped++;
     }
 }
 
-$statement->close();
+$exists->close();
+$insert->close();
 
 json_response([
     'success' => true,

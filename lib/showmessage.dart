@@ -1,50 +1,61 @@
-import 'dart:convert';
-
+import 'package:chat_bubbles/bubbles/bubble_special_one.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
-import 'api_config.dart';
+import 'api_client.dart';
 
-class ChatPage extends StatefulWidget {
-  String dep;
-  String level;
+class StudentMessagesPage extends StatefulWidget {
+  const StudentMessagesPage({
+    super.key,
+    required this.department,
+    required this.level,
+  });
 
-  ChatPage({required this.dep, required this.level});
+  final String department;
+  final String level;
 
   @override
-  _ChatPageState createState() => _ChatPageState();
+  State<StudentMessagesPage> createState() => _StudentMessagesPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
-  List<dynamic> messages = [];
+class _StudentMessagesPageState extends State<StudentMessagesPage> {
+  List<Map<String, dynamic>> _messages = const [];
+  bool _isLoading = true;
+  String? _errorText;
 
   @override
   void initState() {
     super.initState();
-    fetchMessages();
+    _fetchMessages();
   }
 
-  Future<void> fetchMessages() async {
+  Future<void> _fetchMessages() async {
+    setState(() {
+      _isLoading = true;
+      _errorText = null;
+    });
+
     try {
-      final response = await http.post(
-        ApiConfig.endpoint('showmessage.php'),
-        body: {
-          'dep': widget.dep,
-          'level': widget.level,
-        },
+      final response = await ApiClient.post(
+        'showmessage.php',
+        auth: ApiAuth.student,
       );
 
-      if (response.statusCode != 200) return;
+      if (response.statusCode != 200) {
+        throw StateError('Unable to fetch messages.');
+      }
 
-      final decoded = jsonDecode(response.body);
-      if (decoded is! List) return;
+      final messages = ApiClient.decodeMessages(response.body);
 
       if (!mounted) return;
-      setState(() {
-        messages = decoded;
-      });
+      setState(() => _messages = messages);
     } catch (_) {
-      // Keep the existing empty-state behavior when the API is unavailable.
+      if (!mounted) return;
+      setState(() => _errorText = 'تعذر تحميل الرسائل');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -53,50 +64,87 @@ class _ChatPageState extends State<ChatPage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(50),
-          child: AppBar(
-            title: Text('${widget.dep} - ${widget.level}'),
-            centerTitle: true,
-          ),
+        appBar: AppBar(
+          title: Text('${widget.department} - ${widget.level}'),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              tooltip: 'تسجيل الخروج',
+              onPressed: () {
+                ApiClient.clearStudentToken();
+                Navigator.of(context).pop();
+              },
+              icon: const Icon(Icons.logout),
+            ),
+          ],
         ),
-        body: Padding(
-          padding: EdgeInsets.only(top: 30),
-          child: ListView.builder(
-            itemCount: messages.length,
-            itemBuilder: (context, index) {
-              final item = messages[index] as Map<String, dynamic>;
-              return ListTile(
-                subtitle: Text(
-                  item['times']?.toString() ?? '',
-                  style: TextStyle(color: Colors.blue),
-                ),
-                title: Container(
-                  width: 250,
-                  margin: EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                  padding:
-                      EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-                  decoration: BoxDecoration(
-                    color: Colors.lightGreen,
-                    borderRadius: BorderRadius.circular(20.0),
-                  ),
-                  child: SizedBox(
-                    width: 200,
-                    child: Text(
-                      item['mess']?.toString() ?? '',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.0,
-                      ),
-                      maxLines: 5,
-                      overflow: TextOverflow.visible,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
+        body: _buildBody(),
+      ),
+    );
+  }
+
+  String _formatTimestamp(dynamic value) {
+    final raw = value?.toString() ?? '';
+    final parsed = DateTime.tryParse(raw.replaceFirst(' ', 'T'));
+    if (parsed == null) return raw;
+    return DateFormat('yyyy-MM-dd HH:mm').format(parsed);
+  }
+
+  Widget _buildBody() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorText != null) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(_errorText!),
+            const SizedBox(height: 12),
+            OutlinedButton(
+              onPressed: _fetchMessages,
+              child: const Text('إعادة المحاولة'),
+            ),
+          ],
         ),
+      );
+    }
+
+    if (_messages.isEmpty) {
+      return const Center(child: Text('لا توجد رسائل حاليًا'));
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchMessages,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: _messages.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final item = _messages[index];
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              BubbleSpecialOne(
+                text: item['mess']?.toString() ?? '',
+                isSender: false,
+                color: Theme.of(context).colorScheme.primaryContainer,
+                textStyle: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  fontSize: 16,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 16, top: 2),
+                child: Text(
+                  _formatTimestamp(item['times']),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

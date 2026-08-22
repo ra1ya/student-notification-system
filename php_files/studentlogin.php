@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
 
-$code = post_string('code');
+$code = post_string('code', 100);
 
 if ($code === '') {
-    json_response(['result' => 'not here']);
+    json_response([
+        'success' => false,
+        'error' => 'Student code is required',
+    ], 422);
 }
 
 $connection = db_connection();
@@ -21,7 +24,10 @@ $statement->store_result();
 
 if ($statement->num_rows !== 1) {
     $statement->close();
-    json_response(['result' => 'not here']);
+    json_response([
+        'success' => false,
+        'error' => 'Student not found',
+    ], 404);
 }
 
 $statement->bind_result($id, $studentCode, $fullname, $department, $level);
@@ -29,9 +35,16 @@ $statement->fetch();
 $statement->close();
 
 json_response([
-    'id' => (int) $id,
-    'code' => $studentCode,
-    'fullname' => $fullname,
-    'dep' => $department,
-    'level' => $level,
+    'success' => true,
+    'token' => create_access_token('student', (int) $id, [
+        'dep' => (string) $department,
+        'level' => (string) $level,
+    ]),
+    'student' => [
+        'id' => (int) $id,
+        'code' => (string) $studentCode,
+        'fullname' => (string) $fullname,
+        'dep' => (string) $department,
+        'level' => (string) $level,
+    ],
 ]);
