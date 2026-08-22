@@ -116,7 +116,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _selectedLevel,
+                  initialValue: _selectedLevel,
                   decoration: const InputDecoration(
                     labelText: 'المستوى',
                     border: OutlineInputBorder(),

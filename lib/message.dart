@@ -127,7 +127,7 @@ class _MessagePageState extends State<MessagePage> {
               shrinkWrap: true,
               children: [
                 DropdownButtonFormField<String>(
-                  value: _selectedLevel,
+                  initialValue: _selectedLevel,
                   decoration: const InputDecoration(
                     labelText: 'المستوى',
                     border: OutlineInputBorder(),
