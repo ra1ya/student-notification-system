@@ -12,7 +12,7 @@ dependencies:
   chat_bubbles: ^1.6.0
   cupertino_icons: ^1.0.8
   http: ^1.1.0
-  intl: ^0.19.0
+  intl: ^0.20.3
 
 dev_dependencies:
   flutter_test:
