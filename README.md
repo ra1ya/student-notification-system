@@ -2,12 +2,37 @@
 
 [![Quality Checks](https://github.com/ra1ya/student-notification-system/actions/workflows/quality.yml/badge.svg)](https://github.com/ra1ya/student-notification-system/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Platform: Android](https://img.shields.io/badge/Platform-Android-brightgreen.svg)
 
-A secure **Android-focused Flutter application** with a PHP/MySQL backend for targeted student notifications. The project demonstrates mobile/backend integration, role-based authorization, signed access tokens, prepared SQL statements, environment-based configuration, automated quality checks, and Arabic RTL user flows.
+A compact **full-stack mobile system** built with Flutter, PHP, and MySQL. It allows students to receive department- and level-specific announcements while administrators manage students and publish targeted notifications.
+
+The project is intentionally focused on **mobile/backend integration and code quality** rather than visual complexity. It demonstrates authentication, authorization, API design, prepared SQL statements, environment-based configuration, Arabic RTL flows, automated tests, and a verified Android build pipeline.
+
+## Recruiter Snapshot
+
+- **Flutter + PHP/MySQL integration** through a centralized HTTP/JSON client
+- **Separate student and administrator authentication flows** with signed access tokens
+- **Role and department authorization** enforced on protected backend endpoints
+- **CI-verified project quality** with formatting, static analysis, widget tests, PHP linting, and Android debug build
+- **Sanitized demo database** for safe local review
+- **XLSX student import** using PhpSpreadsheet
 
 ## What the System Does
 
 Students sign in with their registration code and receive announcements for their department and study level. Administrators authenticate separately, add students, send targeted announcements, review sent messages, and optionally import student data from XLSX files.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Flutter Android App] -->|HTTP / JSON + Bearer token| B[PHP API]
+    B --> C[Authentication & Authorization]
+    B --> D[Validation & Prepared Statements]
+    C --> E[(MySQL / MariaDB)]
+    D --> E
+```
+
+The API URL is configured once in `lib/api_config.dart`. Shared request handling and authentication headers live in `lib/api_client.dart`.
 
 ## Key Features
 
@@ -15,7 +40,7 @@ Students sign in with their registration code and receive announcements for thei
 - Signed HMAC access tokens with role and expiry validation
 - Department-level authorization for administrator actions
 - Level-targeted announcements (`L1`–`L4` or all levels)
-- Student message access derived from the authenticated token, not client-provided filters
+- Student message access derived from authenticated token claims
 - Prepared statements for database queries
 - bcrypt password verification for administrators
 - Server-generated message timestamps
@@ -24,27 +49,7 @@ Students sign in with their registration code and receive announcements for thei
 - Loading, empty, retry, and error states in the Flutter UI
 - Arabic RTL interface
 - Sanitized demo database
-- GitHub Actions for formatting, analysis, tests, Android debug build, and PHP syntax checks
 - Dependabot configuration for Flutter, Composer, and GitHub Actions dependencies
-
-## Architecture
-
-```text
-Flutter Android App
-   │
-   │ HTTP / JSON + Bearer token
-   ▼
-PHP API
-   │
-   ├── Authentication & authorization
-   ├── Input validation
-   ├── Prepared statements
-   │
-   ▼
-MySQL
-```
-
-The API URL is configured once in `lib/api_config.dart`. Shared request handling and authentication headers live in `lib/api_client.dart`.
 
 ## Tech Stack
 
@@ -183,11 +188,11 @@ flutter build apk --debug
 php -l php_files/*.php
 ```
 
-The CI uses the current Flutter stable channel instead of pinning the project to an outdated Flutter release.
+The quality workflow has been verified successfully with the current Flutter stable channel, including static analysis, widget testing, PHP linting, and Android debug APK build.
 
 ## Platform Scope
 
-This repository intentionally keeps only the platform currently represented and reviewed in the project: **Android**. The old generated iOS scaffold was removed rather than presenting unverified iOS support with stale identifiers. If iOS support is needed later, it should be regenerated and tested from the current Flutter project before being advertised as supported.
+This repository intentionally represents the platform that is currently reviewed and verified: **Android**. Unverified platform scaffolding is not advertised as supported.
 
 ## Portfolio Highlights
 
