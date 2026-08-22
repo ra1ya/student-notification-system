@@ -1,6 +1,9 @@
 # Student Notification Mobile System
 
-A secure multi-role student notification application built with **Flutter**, **Dart**, **PHP 8.2**, and **MySQL**. The project demonstrates mobile/backend integration, role-based authorization, signed access tokens, prepared SQL statements, environment-based configuration, automated quality checks, and Arabic RTL user flows.
+[![Quality Checks](https://github.com/ra1ya/student-notification-system/actions/workflows/quality.yml/badge.svg)](https://github.com/ra1ya/student-notification-system/actions/workflows/quality.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+A secure **Android-focused Flutter application** with a PHP/MySQL backend for targeted student notifications. The project demonstrates mobile/backend integration, role-based authorization, signed access tokens, prepared SQL statements, environment-based configuration, automated quality checks, and Arabic RTL user flows.
 
 ## What the System Does
 
@@ -21,12 +24,13 @@ Students sign in with their registration code and receive announcements for thei
 - Loading, empty, retry, and error states in the Flutter UI
 - Arabic RTL interface
 - Sanitized demo database
-- GitHub Actions for `flutter analyze`, `flutter test`, and PHP syntax checks
+- GitHub Actions for formatting, analysis, tests, Android debug build, and PHP syntax checks
+- Dependabot configuration for Flutter, Composer, and GitHub Actions dependencies
 
 ## Architecture
 
 ```text
-Flutter App
+Flutter Android App
    │
    │ HTTP / JSON + Bearer token
    ▼
@@ -44,12 +48,12 @@ The API URL is configured once in `lib/api_config.dart`. Shared request handling
 
 ## Tech Stack
 
-- **Mobile:** Flutter, Dart
+- **Mobile:** Flutter, Dart, Android
 - **Backend:** PHP 8.2+
 - **Database:** MySQL / MariaDB
 - **API:** HTTP, JSON, Bearer authentication
 - **Security:** bcrypt, HMAC-SHA256 signed access tokens, prepared statements
-- **Quality:** Flutter analyzer, widget tests, PHP syntax linting, GitHub Actions
+- **Quality:** Dart formatter, Flutter analyzer, widget tests, Android debug build, PHP syntax linting, GitHub Actions
 - **Spreadsheet Import:** PhpSpreadsheet
 
 ## Project Structure
@@ -81,13 +85,15 @@ php_files/
 database/
 └── student_notifications_demo.sql
 
-.github/workflows/
-└── quality.yml
+.github/
+├── dependabot.yml
+└── workflows/
+    └── quality.yml
 ```
 
 ## Local Setup
 
-### Flutter
+### Flutter / Android
 
 Install dependencies:
 
@@ -167,20 +173,29 @@ Database queries use prepared statements and user-controlled text is length-vali
 
 ## Quality Checks
 
-The repository includes a GitHub Actions workflow that runs on pushes and pull requests to `main`:
+The repository runs automated checks on pushes and pull requests to `main`:
 
 ```text
-flutter pub get
+dart format --output=none --set-exit-if-changed lib test
 flutter analyze
 flutter test
+flutter build apk --debug
 php -l php_files/*.php
 ```
 
-The included widget test verifies the student login screen renders its core controls.
+The CI uses the current Flutter stable channel instead of pinning the project to an outdated Flutter release.
+
+## Platform Scope
+
+This repository intentionally keeps only the platform currently represented and reviewed in the project: **Android**. The old generated iOS scaffold was removed rather than presenting unverified iOS support with stale identifiers. If iOS support is needed later, it should be regenerated and tested from the current Flutter project before being advertised as supported.
 
 ## Portfolio Highlights
 
-This project demonstrates practical experience with Flutter application development, PHP/MySQL backend engineering, API integration, authentication and authorization, secure database access, environment configuration, automated quality checks, responsive error handling, and maintainable project organization.
+This project demonstrates practical experience with Flutter application development, PHP/MySQL backend engineering, API integration, authentication and authorization, secure database access, environment configuration, Android build configuration, automated quality checks, responsive error handling, and maintainable project organization.
+
+## License
+
+This project is available under the MIT License. See `LICENSE`.
 
 ## Author
 
