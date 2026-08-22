@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:rayan_project/studentlogin.dart';
+import 'package:student_notification_system/studentlogin.dart';
 
 void main() {
   runApp(const MyApp());
