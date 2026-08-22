@@ -18,7 +18,7 @@ jobs:
     name: Flutter quality and build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Flutter stable
         uses: subosito/flutter-action@v2
@@ -45,7 +45,7 @@ jobs:
     name: PHP quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: shivammathur/setup-php@v2
         with:
