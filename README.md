@@ -23,9 +23,12 @@ The Flutter application communicates with a lightweight PHP/MySQL backend over H
 
 ### Backend
 - PHP endpoints for login, registration, messaging, and message retrieval
-- MySQL data storage
+- Centralized database/API configuration in `php_files/config.php`
+- Prepared statements for user-controlled database queries
+- MySQL `utf8mb4` connection handling
 - JSON responses consumed by the Flutter application
-- Spreadsheet dependency available through PhpSpreadsheet for student-data import workflows
+- Password-hash support for administrator accounts
+- XLSX student import through PhpSpreadsheet with validation
 
 ## Tech Stack
 
@@ -50,6 +53,7 @@ lib/                     Flutter application source
 ├── showmessage.dart
 └── showmessageadmin.dart
 php_files/               PHP backend endpoints
+├── config.php            Shared DB/API configuration
 ├── login.php
 ├── studentlogin.php
 ├── register.php
@@ -71,7 +75,7 @@ A sanitized demo schema is included at:
 database/student_notifications_demo.sql
 ```
 
-It contains only demo records and can be imported into MySQL for local testing.
+It contains only demo records and can be imported into MySQL for local testing. The demo administrator password is stored as a bcrypt hash.
 
 ## Local Setup
 
@@ -102,15 +106,30 @@ cd php_files
 composer install
 ```
 
+Database settings are centralized in `php_files/config.php`. For local XAMPP development the defaults are:
+
+```text
+DB_HOST=localhost
+DB_USER=root
+DB_PASS=
+DB_NAME=chat
+```
+
+For deployment, set these values as server environment variables instead of hard-coding production credentials.
+
 ### 3. MySQL
 
-Create a database named `chat`, then import:
+Create/import the demo database using:
 
 ```text
 database/student_notifications_demo.sql
 ```
 
-The current PHP scripts use local-development database settings (`localhost`, `root`, empty password, database `chat`). Update these settings for your own environment before deployment.
+## Backend Safety Improvements
+
+The portfolio version of the backend uses prepared statements instead of interpolating user input directly into SQL. API responses no longer expose administrator passwords, student registration is validated, duplicate registration codes are rejected, and XLSX imports validate file type, size, and row data before insertion.
+
+The login endpoint supports bcrypt/Argon password hashes. A temporary plaintext-password compatibility path remains only so older local databases can still be tested; new deployments should use password hashes exclusively.
 
 ## Portfolio Highlights
 
@@ -121,13 +140,16 @@ This project demonstrates hands-on experience with:
 - HTTP requests and JSON handling
 - Role-specific application flows
 - Department- and level-based data filtering
-- Form handling and validation workflows
+- Prepared statements and backend input validation
+- Centralized backend configuration
+- Password-hash verification
+- XLSX data import
 - Arabic RTL mobile interfaces
 - Relational data storage
 
 ## Notes
 
-This repository is a portfolio/local-development project. Before production deployment, backend authentication and database access should be hardened further, environment-based configuration should be used, and all user input should be validated and parameterized.
+This repository is a portfolio/local-development project. Before public deployment, use HTTPS, production environment variables, stronger authorization/session handling, request rate limiting, and a centralized configurable Flutter API base URL.
 
 ## Author
 

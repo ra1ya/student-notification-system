@@ -41,9 +41,10 @@ CREATE TABLE `messages` (
   KEY `messages_dep_level_index` (`dep`, `level`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Demo-only accounts/data. Do not use these credentials in production.
+-- Demo-only accounts/data. Password for demo_admin: password
+-- The password is stored as a bcrypt hash, not plaintext.
 INSERT INTO `admin` (`username`, `password`, `dep`) VALUES
-('demo_admin', 'password', 'IT');
+('demo_admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.', 'IT');
 
 INSERT INTO `student` (`code`, `fullname`, `dep`, `level`) VALUES
 ('10001', 'Demo Student One', 'IT', 'L1'),

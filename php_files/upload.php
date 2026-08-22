@@ -1,52 +1,111 @@
 <?php
-// Check if a file was uploaded
-if(isset($_FILES['excel_file'])) {
-  $file = $_FILES['excel_file'];
-  $file_name = $file['name'];
-  $file_tmp = $file['tmp_name'];
 
-  // Save the uploaded file
-  $upload_dir = 'upload/';
-  $uploaded_file = $upload_dir . basename($file_name);
-  move_uploaded_file($file_tmp, $uploaded_file);
-  // Process the Excel file
-  require 'vendor/autoload.php';
-  $reader = new Xlsx();
-  $spreadsheet = $reader->load($uploaded_file);
-  $worksheet = $spreadsheet->getActiveSheet();
-  // Connect to the MySQL database
-  $servername = "localhost";
-  $username = "root";
-  $password = "";
-  $database = "chat";
+declare(strict_types=1);
 
-  $conn = new mysqli($servername, $username, $password, $database);
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
-  // Check connection
-  if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-  }
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/vendor/autoload.php';
 
-  // Insert data from the Excel file into the MySQL database
-  $sql = "INSERT INTO student (`code`,`fullname`,`dep`,`level`) VALUES (?, ?, ?,?)";
-  $stmt = $conn->prepare($sql);
+if (!isset($_FILES['excel_file'])) {
+    json_response([
+        'success' => false,
+        'error' => 'No file was uploaded',
+    ], 400);
+}
 
-  foreach ($worksheet->getRowIterator(3) as $row) {
+$file = $_FILES['excel_file'];
+
+if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+    json_response([
+        'success' => false,
+        'error' => 'File upload failed',
+    ], 400);
+}
+
+$fileName = (string) ($file['name'] ?? '');
+$fileSize = (int) ($file['size'] ?? 0);
+$fileTmp = (string) ($file['tmp_name'] ?? '');
+$extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+
+if ($extension !== 'xlsx') {
+    json_response([
+        'success' => false,
+        'error' => 'Only XLSX files are supported',
+    ], 422);
+}
+
+if ($fileSize <= 0 || $fileSize > 5 * 1024 * 1024) {
+    json_response([
+        'success' => false,
+        'error' => 'The XLSX file must be 5 MB or smaller',
+    ], 422);
+}
+
+try {
+    $reader = new Xlsx();
+    $spreadsheet = $reader->load($fileTmp);
+    $worksheet = $spreadsheet->getActiveSheet();
+} catch (Throwable $exception) {
+    json_response([
+        'success' => false,
+        'error' => 'Unable to read the uploaded XLSX file',
+    ], 422);
+}
+
+$connection = db_connection();
+$statement = prepared_statement(
+    $connection,
+    'INSERT INTO student (code, fullname, dep, level) VALUES (?, ?, ?, ?)'
+);
+
+$inserted = 0;
+$skipped = 0;
+
+foreach ($worksheet->getRowIterator(3) as $row) {
+    $values = [];
     $cellIterator = $row->getCellIterator();
     $cellIterator->setIterateOnlyExistingCells(false);
-    $values = [];
+
     foreach ($cellIterator as $cell) {
-      $values[] = $cell->getValue();
+        $values[] = trim((string) $cell->getValue());
     }
-    $stmt->bind_param("sss", $values[0], $values[1], $values[2],$values[3]);
-    $stmt->execute();
-  }
 
-  $stmt->close();
-  $conn->close();
+    $code = $values[0] ?? '';
+    $fullname = $values[1] ?? '';
+    $department = $values[2] ?? '';
+    $level = $values[3] ?? '';
 
-  echo "File uploaded and data inserted into the database successfully.";
-} else {
-  echo "No file was uploaded.";
+    if ($code === '' || $fullname === '' || $department === '' || !valid_level($level, false)) {
+        $skipped++;
+        continue;
+    }
+
+    $check = prepared_statement($connection, 'SELECT id FROM student WHERE code = ? LIMIT 1');
+    $check->bind_param('s', $code);
+    $check->execute();
+    $check->store_result();
+
+    if ($check->num_rows > 0) {
+        $check->close();
+        $skipped++;
+        continue;
+    }
+
+    $check->close();
+    $statement->bind_param('ssss', $code, $fullname, $department, $level);
+
+    if ($statement->execute()) {
+        $inserted++;
+    } else {
+        $skipped++;
+    }
 }
-?>
+
+$statement->close();
+
+json_response([
+    'success' => true,
+    'inserted' => $inserted,
+    'skipped' => $skipped,
+]);

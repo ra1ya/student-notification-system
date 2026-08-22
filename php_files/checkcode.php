@@ -1,24 +1,37 @@
 <?php
 
+declare(strict_types=1);
 
-$servername = "localhost";
-$username ="root";
-$password = "";
-$dbname = "chat";
-// Create connection
-$con = mysqli_connect($servername, $username, $password, $dbname);
-$code = '';
-if(isset($_POST['code'])){
-    $code= $_POST['code'];
+require_once __DIR__ . '/config.php';
+
+$code = post_string('code');
+
+if ($code === '') {
+    json_response(['error' => 'Student code is required'], 422);
 }
 
-$result= mysqli_query($con,"select * from `student` where `code`='$code'");
-if ($result->num_rows > 0) {
-    // Fetch user data and return as a JSON response
-    $user = $result->fetch_assoc();
-    echo json_encode($user);
-} else {
-    // Return an error message
-    echo json_encode(array('error' => 'Invalid email or password'));
+$connection = db_connection();
+$statement = prepared_statement(
+    $connection,
+    'SELECT id, code, fullname, dep, level FROM student WHERE code = ? LIMIT 1'
+);
+$statement->bind_param('s', $code);
+$statement->execute();
+$statement->store_result();
+
+if ($statement->num_rows !== 1) {
+    $statement->close();
+    json_response(['error' => 'Student code not found'], 404);
 }
-?>
+
+$statement->bind_result($id, $studentCode, $fullname, $department, $level);
+$statement->fetch();
+$statement->close();
+
+json_response([
+    'id' => (int) $id,
+    'code' => $studentCode,
+    'fullname' => $fullname,
+    'dep' => $department,
+    'level' => $level,
+]);

@@ -1,38 +1,44 @@
-
 <?php
-// MySQL database credentials
 
-$servername = "localhost";
-$username ="root";
-$password = "";
-$dbname = "chat";
-// Create connection
-$con = mysqli_connect($servername, $username, $password, $dbname);
+declare(strict_types=1);
 
-$level = '';
-$message = '';
-$time = '';
-if(isset($_POST['level'])){
- $level =$_POST['level'];
+require_once __DIR__ . '/config.php';
+
+$level = post_string('level');
+$message = post_string('message');
+$department = post_string('dep');
+$time = post_string('time');
+
+if ($message === '' || $department === '' || !valid_level($level, true)) {
+    json_response([
+        'success' => false,
+        'error' => 'Invalid message data',
+    ], 422);
 }
 
-if(isset($_POST['message'])){
-    $message =$_POST['message'];
-}
-$dep='';
-if(isset($_POST['dep'])){
-    $dep =$_POST['dep'];
-}
-if(isset($_POST['time'])){
-    $time =$_POST['time'];
-   }
+$connection = db_connection();
+$statement = prepared_statement(
+    $connection,
+    'INSERT INTO messages (mess, dep, level, times) VALUES (?, ?, ?, ?)'
+);
+$statement->bind_param('ssss', $message, $department, $level, $time);
 
-// Insert data into the database
+if (!$statement->execute()) {
+    $statement->close();
+    json_response([
+        'success' => false,
+        'error' => 'Unable to save message',
+    ], 500);
+}
 
-    $query = "INSERT INTO messages(`mess`,`dep`,`level`,`times`) VALUES ('$message','$dep','$level','$time')";
-    $results = mysqli_query($con,$query);
-    if($results>0)
-    {
-        echo "user added successfully";
-    }
-?>
+$messageId = $statement->insert_id;
+$statement->close();
+
+json_response([
+    'success' => true,
+    'id' => (int) $messageId,
+    'message' => $message,
+    'dep' => $department,
+    'level' => $level,
+    'times' => $time,
+]);

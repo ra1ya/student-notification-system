@@ -1,37 +1,40 @@
 <?php
 
+declare(strict_types=1);
 
-$servername = "localhost";
-$username ="root";
-$password = "";
-$dbname = "chat";
-// Create connection
-$con = mysqli_connect($servername, $username, $password, $dbname);
+require_once __DIR__ . '/config.php';
 
+$username = post_string('username');
+$password = post_string('password');
 
-$username = '';
-$password='';
-if(isset($_POST['username'])){
-    $username= $_POST['username'];
-}
-if(isset($_POST['password'])){
-    $password = $_POST['password'];
+if ($username === '' || $password === '') {
+    json_response(['result' => 'not here']);
 }
 
-$result= mysqli_query($con,"select * from `admin` where `username`='$username' AND `password`='$password'");
-$count = $result->num_rows;
+$connection = db_connection();
+$statement = prepared_statement(
+    $connection,
+    'SELECT id, username, password, dep FROM admin WHERE username = ? LIMIT 1'
+);
+$statement->bind_param('s', $username);
+$statement->execute();
+$statement->store_result();
 
-if($count > 0){
-    $sql = "select * from `admin` where `username`='$username' AND `password`='$password'";
-    $result = $con->query($sql);
-    if ($result->num_rows > 0) {
-        // Fetch user data and return as a JSON response
-        $user = $result->fetch_assoc();
-        echo json_encode($user);
-    }
-    
- }else{
-    
-    echo json_encode (array("result"=>"not here"));
- }
-?>
+if ($statement->num_rows !== 1) {
+    $statement->close();
+    json_response(['result' => 'not here']);
+}
+
+$statement->bind_result($id, $dbUsername, $storedPassword, $department);
+$statement->fetch();
+$statement->close();
+
+if (!password_matches($password, (string) $storedPassword)) {
+    json_response(['result' => 'not here']);
+}
+
+json_response([
+    'id' => (int) $id,
+    'username' => $dbUsername,
+    'dep' => $department,
+]);

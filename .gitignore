@@ -30,8 +30,14 @@ migrate_working_dir/
 .pub/
 /build/
 
-# PHP Composer dependencies
+# PHP Composer dependencies and local upload files
 /php_files/vendor/
+/php_files/upload/
+
+# Local environment files
+.env
+.env.*
+!.env.example
 
 # Symbolication related
 app.*.symbols
