@@ -5,8 +5,9 @@ class ApiConfig {
   );
 
   static Uri endpoint(String path) {
-    final normalizedBase =
-        baseUrl.endsWith('/') ? baseUrl.substring(0, baseUrl.length - 1) : baseUrl;
+    final normalizedBase = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
     final normalizedPath = path.startsWith('/') ? path.substring(1) : path;
 
     return Uri.parse('$normalizedBase/$normalizedPath');

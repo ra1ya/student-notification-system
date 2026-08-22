@@ -53,7 +53,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (!mounted) return;
 
-      if ((response.statusCode == 200 || response.statusCode == 201) && success) {
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          success) {
         _codeController.clear();
         _fullnameController.clear();
         _showMessage('تم إضافة الطالب بنجاح');
@@ -115,7 +116,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _selectedLevel,
+                  initialValue: _selectedLevel,
                   decoration: const InputDecoration(
                     labelText: 'المستوى',
                     border: OutlineInputBorder(),

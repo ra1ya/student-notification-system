@@ -52,7 +52,10 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       final token = payload['token']?.toString() ?? '';
       final user = payload['user'];
 
-      if (response.statusCode != 200 || !success || token.isEmpty || user is! Map) {
+      if (response.statusCode != 200 ||
+          !success ||
+          token.isEmpty ||
+          user is! Map) {
         if (!mounted) return;
         setState(() => _errorText = 'اسم المستخدم أو كلمة المرور غير صحيحة');
         return;

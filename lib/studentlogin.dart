@@ -47,7 +47,10 @@ class _StudentLoginPageState extends State<StudentLoginPage> {
       final token = payload['token']?.toString() ?? '';
       final student = payload['student'];
 
-      if (response.statusCode != 200 || !success || token.isEmpty || student is! Map) {
+      if (response.statusCode != 200 ||
+          !success ||
+          token.isEmpty ||
+          student is! Map) {
         if (!mounted) return;
         setState(() => _errorText = 'رقم القيد غير موجود');
         return;
